@@ -1,0 +1,40 @@
+# daemon-killer config for macOS. Installed to /etc/daemon-killer/config.toml.
+# Every unset key falls back to the default shown in src/config.rs.
+
+# Clash TUN interface. Pin it in Clash (`tun.device: utun1500`) so it never changes.
+tun_device = "utun1500"
+
+# "strict": physical interfaces may only reach the proxy upstreams and Clash's DNS servers.
+#           Clash rules that go DIRECT to the public internet stop working.
+# "core":   let every TCP/UDP socket owned by `core_uid` go out directly, so Clash DIRECT
+#           rules keep working. mihomo-party runs mihomo as root, so this means every
+#           root process may go direct; user apps (uid 501) are still forced through the TUN.
+egress = "core"
+core_uid = 0
+
+# Proxy servers, provider files and DNS servers are collected from the running mihomo config.
+# Only "strict" needs them.
+# mihomo_config = "/Users/<you>/Library/Application Support/mihomo-party/work/config.yaml"
+# Extra upstreams (IP, CIDR or hostname) not found in the mihomo config.
+upstreams = []
+
+# RFC1918 / link-local / multicast may bypass the TUN (printers, AirDrop, corp 10.0.0.0/8).
+allow_lan = false
+allow_cidrs = []
+# Host-only VM bridges, e.g. ["bridge100", "bridge101"]. They are not a path to the internet.
+allow_interfaces = []
+allow_dhcp = true
+
+# Health checks (alerts and kill_apps only; the pf rules hold either way).
+mihomo_process = "mihomo"
+controller = "/tmp/mihomo-party-*.sock"
+# controller_secret = ""
+check_interval_secs = 2
+upstream_refresh_secs = 600
+unhealthy_grace_secs = 10
+
+# Exact process names to kill when Clash stays unhealthy, e.g. ["Telegram"].
+kill_apps = []
+notify = true
+
+state_dir = "/var/db/daemon-killer"

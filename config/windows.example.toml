@@ -1,0 +1,53 @@
+# daemon-killer config for Windows. Installed to C:\ProgramData\daemon-killer\config.toml.
+# Every unset key falls back to the default shown in src/config.rs.
+
+# Alias of the Clash Wintun adapter (Get-NetAdapter). Pin it in Clash (`tun.device: Mihomo`).
+tun_device = "Mihomo"
+
+# "strict": physical interfaces may only reach the proxy upstreams and Clash's DNS servers,
+#           and only from core_program. Clash DIRECT rules to the internet stop working.
+# "core":   let every TCP/UDP socket of core_program go out directly, so Clash DIRECT rules
+#           keep working. Unlike macOS this is per executable, not per user: Clash Party
+#           runs mihomo as the logged-in user, the same account as every other app.
+egress = "core"
+# Elevated PowerShell: (Get-Process mihomo).Path
+core_program = 'C:\Program Files\Clash Party\resources\sidecar\mihomo.exe'
+
+# Other executables that may reach the internet directly, bypassing the TUN. Each entry keeps
+# working when Clash is down, so only add programs that cannot go through the TUN.
+# Not tailscaled.exe: with Clash's auto-route its traffic already leaves through the TUN, and
+# a permit here would let it (and an exit node) go out directly once Clash dies. For direct
+# Tailscale paths use a mihomo rule instead: PROCESS-NAME,tailscaled.exe,DIRECT
+allow_programs = []
+
+# Proxy servers, provider files and DNS servers are collected from the running mihomo config.
+# mihomo_config = 'C:\Users\you\AppData\Roaming\mihomo-party\work\config.yaml'
+upstreams = []
+
+# RFC1918 / link-local / multicast may bypass the TUN (printers, corp 10.0.0.0/8).
+allow_lan = false
+allow_cidrs = []
+# Adapters this host's apps may use besides the TUN, e.g. ["vEthernet (WSL)"] to talk to WSL.
+# Only this host's own sockets are filtered; WSL and VMs are out of scope.
+# Add "Tailscale" to reach the tailnet: its packets are re-encrypted by tailscaled and still
+# leave through the TUN, but they skip mihomo's rules (an exit node becomes the egress) and
+# tailnet peers can reach local services.
+allow_interfaces = []
+allow_dhcp = true
+# Block from TCP/IP start until the Base Filtering Engine loads the persistent filters.
+boot_time_block = false
+
+# Health checks (alerts and kill_apps only; the WFP filters hold either way).
+mihomo_process = "mihomo"
+# Clash Party names its pipe after the user and core PID; Clash Verge Rev uses \\.\pipe\verge-mihomo.
+controller = '\\.\pipe\MihomoParty\mihomo-*'
+# controller_secret = ""
+check_interval_secs = 2
+upstream_refresh_secs = 600
+unhealthy_grace_secs = 10
+
+# Process names to kill when Clash stays unhealthy, e.g. ["Telegram"].
+kill_apps = []
+notify = true
+
+state_dir = 'C:\ProgramData\daemon-killer\state'
