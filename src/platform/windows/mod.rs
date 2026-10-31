@@ -2,8 +2,10 @@
 
 mod path_env;
 pub mod service;
+mod toast;
 mod wfp;
 
+pub use toast::{notify, show as show_notification};
 pub use wfp::Wfp as NativeFirewall;
 
 use anyhow::{ensure, Context, Result};

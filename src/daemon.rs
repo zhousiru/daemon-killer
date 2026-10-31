@@ -1,9 +1,11 @@
 //! The enforcement loop: keep our firewall rules as `up`/`down`/`pause` asked, and put them
-//! back when something else changes them. Clash going down needs no reaction: the rules
-//! already block everything outside the TUN.
+//! back when something else changes them. Clash going down needs no reaction beyond telling
+//! the user: the rules already block everything outside the TUN.
 
 use crate::config::Config;
 use crate::firewall::{self, Firewall, FwState};
+use crate::health;
+use crate::notify::Notifier;
 use crate::platform;
 use crate::policy::Policy;
 use anyhow::Result;
@@ -69,6 +71,7 @@ pub fn run(config_path: &Path, stop: Receiver<()>) -> Result<()> {
     platform::secure_dir(&cfg.state_dir)?;
     let fw = firewall::native(&cfg);
     let mut applied: Option<Applied> = None;
+    let mut notifier = Notifier::default();
     log::info!("started; protects through {}", cfg.tun_device);
 
     loop {
@@ -91,6 +94,13 @@ pub fn run(config_path: &Path, stop: Receiver<()>) -> Result<()> {
                 (false, Some(format!("{e:#}")))
             }
         };
+        // Failing to open the firewall for `down` or a pause leaks nothing.
+        let leak = firewall_error.as_deref().filter(|_| want == Want::Block);
+        let health = blocking.then(|| health::check(&cfg));
+        notifier.tick(leak, health.as_ref(), |n| {
+            log::info!("notifying: {}", n.title());
+            platform::notify(n.title(), &n.body(&cfg))
+        });
         write_report(
             &cfg.state_dir,
             &Report {

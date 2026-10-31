@@ -4,6 +4,7 @@
 //! - `service`: install/run/query the daemon and the install rollback guard
 //! - `DEFAULT_TUN`, `EXAMPLE_CONFIG`, `default_config_path`, `default_state_dir`
 //! - `is_elevated`, `iface_up`, `process_running`, `secure_dir`, `init_logging`
+//! - `notify`: show a notification to the logged-in user, from the daemon
 //!
 //! Process names match exactly on macOS and case-insensitively, `.exe` optional, on Windows.
 

@@ -6,6 +6,7 @@ mod pf;
 pub use launchd as service;
 pub use pf::Pf as NativeFirewall;
 
+use crate::notify::Delivery;
 use anyhow::Result;
 use std::ffi::CStr;
 use std::path::{Path, PathBuf};
@@ -71,6 +72,50 @@ pub fn process_running(name: &str) -> bool {
         .stderr(Stdio::null())
         .status()
         .is_ok_and(|s| s.success())
+}
+
+/// The user at the console; root owns it at the login window.
+fn console_uid() -> Option<libc::uid_t> {
+    // SAFETY: stat fills a zeroed struct for a NUL-terminated path.
+    let uid = unsafe {
+        let mut st: libc::stat = std::mem::zeroed();
+        (libc::stat(c"/dev/console".as_ptr(), &mut st) == 0).then_some(st.st_uid)
+    };
+    uid.filter(|&u| u != 0)
+}
+
+/// A LaunchDaemon has no GUI session; run osascript in the console user's, as that user.
+/// The text goes in as arguments, never into the script. Notifications show as from
+/// Script Editor and leave nothing of ours behind.
+pub fn notify(title: &str, body: &str) -> Delivery {
+    let Some(uid) = console_uid() else {
+        return Delivery::NoUser;
+    };
+    let child = Command::new("/bin/launchctl")
+        .args(["asuser", &uid.to_string(), "/usr/bin/sudo", "-u"])
+        .arg(format!("#{uid}"))
+        .args([
+            "/usr/bin/osascript",
+            "-e",
+            "on run argv",
+            "-e",
+            "display notification (item 2 of argv) with title (item 1 of argv)",
+            "-e",
+            "end run",
+            title,
+            body,
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+    match child {
+        Ok(mut c) => {
+            std::thread::spawn(move || c.wait());
+        }
+        Err(e) => log::warn!("notifying: {e}"),
+    }
+    Delivery::Sent
 }
 
 #[cfg(test)]

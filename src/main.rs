@@ -7,6 +7,7 @@ mod daemon;
 mod firewall;
 mod health;
 mod install;
+mod notify;
 mod platform;
 mod policy;
 mod status;
@@ -63,6 +64,15 @@ enum Cmd {
         ticket: PathBuf,
         #[arg(long)]
         seconds: u64,
+    },
+    /// Shows a toast; the service starts it in the logged-in user's session
+    #[cfg(windows)]
+    #[command(hide = true)]
+    Notify {
+        #[arg(long, allow_hyphen_values = true)]
+        title: String,
+        #[arg(long, allow_hyphen_values = true)]
+        body: String,
     },
 }
 
@@ -123,5 +133,7 @@ fn run(cli: Cli) -> Result<()> {
             require_elevated()?;
             service::run(move |_stop| install::rollback_watchdog(&config, &ticket, seconds))
         }
+        #[cfg(windows)]
+        Cmd::Notify { title, body } => platform::show_notification(&title, &body),
     }
 }

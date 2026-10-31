@@ -172,7 +172,7 @@ pub fn register() -> Result<()> {
         }]),
     })?;
     svc.set_failure_actions_on_non_crash_failures(true)?;
-    Ok(())
+    super::toast::register()
 }
 
 /// WFP filters are persistent; only the loop stops.
@@ -221,6 +221,7 @@ fn park_running_binary(dir: &Path) {
 }
 
 pub fn remove_files() {
+    super::toast::unregister();
     let dir = install_dir();
     if let Err(e) = super::path_env::remove(&dir) {
         log::warn!("removing {} from PATH: {e:#}", dir.display());
