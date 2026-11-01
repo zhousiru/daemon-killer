@@ -1,5 +1,7 @@
 # daemon-killer
 
+English | [简体中文](README.zh-CN.md)
+
 [![CI](https://github.com/zhousiru/daemon-killer/actions/workflows/ci.yml/badge.svg)](https://github.com/zhousiru/daemon-killer/actions/workflows/ci.yml)
 
 A fail-closed kill switch for the [Clash](https://github.com/MetaCubeX/mihomo) TUN. When Clash stops, your traffic stops.
